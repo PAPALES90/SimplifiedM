@@ -1,50 +1,17 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Sohbet Odası</title>
-</head>
-<body>
-    <h1>Sohbet Sistemi</h1>
-    <div id="chat" style="height:300px; border:1px solid #ccc; overflow:auto; margin-bottom: 10px;"></div>
-    
-    <input id="input" placeholder="Mesaj yaz...">
-    <button onclick="send()">Gönder</button>
+<div id="kullanici-alani" style="border:1px solid red; padding:5px;">
+    <strong>Aktif Kişiler:</strong> <span id="liste"></span>
+</div>
+<div id="chat" style="height:250px; border:1px solid #ccc; overflow:auto;"></div>
 
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>
-        // Eksiksiz bağlantı:
-        const socket = io("https://simplifiedm.onrender.com");
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    let isim = prompt("İsmin ne?") || "Misafir";
+    socket.emit('yeni-kullanici', isim);
 
-        socket.on('connect', () => {
-            console.log("Sunucuya bağlandım!");
-        });
+    socket.on('kullanici-listesi', (list) => {
+        document.getElementById('liste').textContent = list.join(', ');
+    });
 
-        let kullaniciAdi = prompt("İsmin ne? (Max 13 harf):") || "Misafir";
-        if (kullaniciAdi.length > 13) kullaniciAdi = kullaniciAdi.substring(0, 13);
-
-        function send() {
-            const input = document.getElementById('input');
-            const msg = input.value;
-            
-            console.log("Gönder butonuna basıldı. Mesaj:", msg); // Bak burası F12'de gözükecek
-
-            if (msg.trim() !== "") {
-                const formatliMesaj = `(${kullaniciAdi}): ${msg}`;
-                socket.emit('mesaj', formatliMesaj);
-                console.log("Mesaj sunucuya gönderildi."); // Başarılıysa bu çıkacak
-                input.value = '';
-            }
-        }
-
-        socket.on('mesaj', (msg) => {
-            console.log("Sunucudan yeni mesaj geldi:", msg); // Yeni mesaj gelince burası çalışacak
-            const div = document.createElement('div');
-            div.textContent = msg;
-            const chatBox = document.getElementById('chat');
-            chatBox.appendChild(div);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        });
-    </script>
-</body>
-</html>
+    // ... (Mesaj gönderme fonksiyonun aynı kalacak) ...
+</script>
