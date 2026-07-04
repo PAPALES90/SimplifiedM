@@ -2,85 +2,91 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>SimplifiedM Sohbet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimplifiedM Chat</title>
     <style>
-        /* Tasarım kısmı: Soluk mavi ekran */
-        #login-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #add8e6; /* Soluk mavi */
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000;
-        }
-        .login-box { background: white; padding: 20px; border-radius: 10px; text-align: center; }
-        body { font-family: sans-serif; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e5ddd5; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        /* Giriş Modalı */
+        #login-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: #008069; display:flex; justify-content:center; align-items:center; z-index: 1000; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        /* Sohbet Ekranı */
+        #chat-ui { width: 100%; max-width: 400px; height: 90vh; background: white; display: flex; flex-direction: column; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); overflow: hidden; }
+        #header { background: #008069; color: white; padding: 15px; text-align: center; font-weight: bold; }
+        #chat { flex: 1; padding: 15px; overflow-y: auto; background: #f0f2f5; }
+        
+        /* Baloncuklar */
+        .msg { background: white; padding: 10px; margin: 8px 0; border-radius: 10px; width: fit-content; max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        /* Giriş Çubuğu */
+        .footer { padding: 10px; display: flex; gap: 5px; background: white; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
+        button { background: #008069; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- İsim giriş ekranı -->
     <div id="login-modal">
         <div class="login-box">
             <h2>Hoş geldin!</h2>
-            <input id="name-input" placeholder="Adın ne olsun?">
-            <button onclick="kayitOl()">Giriş Yap</button>
+            <input id="name-input" placeholder="Adın ne?">
+            <br><br>
+            <button onclick="kayitOl()">Sohbete Başla</button>
         </div>
     </div>
 
-    <!-- Sohbet ekranı -->
     <div id="chat-ui" style="display:none;">
-        <div style="border:1px solid red; padding:5px; margin-bottom:10px;">
-            <strong>Aktif:</strong> <span id="liste"></span>
+        <div id="header">Aktif: <span id="liste">...</span></div>
+        <div id="chat"></div>
+        <div class="footer">
+            <input id="input" placeholder="Mesaj yaz...">
+            <button onclick="send()">Gönder</button>
         </div>
-        <div id="chat" style="height:300px; border:1px solid #ccc; overflow:auto;"></div>
-        <input id="input" placeholder="Mesaj...">
-        <button onclick="send()">Gönder</button>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
     <script>
-        const socket = io();
-        let kullaniciAdi = localStorage.getItem('chatUsername'); // Daha önce girdi mi kontrol et
+        var socket = io(); 
+        var kullaniciAdi = localStorage.getItem('chatUsername');
 
-        // Eğer isim kayıtlıysa giriş ekranını atla
-        if (kullaniciAdi) {
-            baslat(kullaniciAdi);
-        }
+        if (kullaniciAdi) { baslat(kullaniciAdi); }
 
         function kayitOl() {
-            let isim = document.getElementById('name-input').value;
-            if(isim.length > 13) isim = isim.substring(0, 13);
+            var isim = document.getElementById('name-input').value;
             if(isim) {
-                localStorage.setItem('chatUsername', isim); // İsmi hafızaya kaydet
+                localStorage.setItem('chatUsername', isim);
                 baslat(isim);
             }
         }
 
         function baslat(isim) {
             kullaniciAdi = isim;
-            document.getElementById('login-modal').style.display = 'none'; // Giriş ekranını kapat
-            document.getElementById('chat-ui').style.display = 'block';   // Sohbeti aç
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('chat-ui').style.display = 'flex';
             socket.emit('yeni-kullanici', isim);
         }
 
-        // ... Diğer mesajlaşma kodları aynı ...
-        socket.on('gecmis-mesajlar', (gecmis) => { gecmis.forEach(m => mesajEkle(m)); });
-        socket.on('mesaj', (data) => { mesajEkle(data); });
-        socket.on('kullanici-listesi', (list) => { document.getElementById('liste').textContent = list.join(', '); });
-
         function send() {
-            const input = document.getElementById('input');
+            var input = document.getElementById('input');
             if(input.value.trim() !== "") {
-                socket.emit('mesaj', {isim: kullaniciAdi, mesaj: input.value});
+                socket.emit('mesaj', {kimden: kullaniciAdi, icerik: input.value});
                 input.value = '';
             }
         }
 
-        function mesajEkle(data) {
-            const div = document.createElement('div');
-            div.textContent = `(${data.kimden}): ${data.icerik}`;
-            document.getElementById('chat').appendChild(div);
-            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
-        }
+        socket.on('mesaj', function(data) {
+            var div = document.createElement('div');
+            div.className = 'msg';
+            div.innerHTML = '<strong>' + data.kimden + ':</strong> ' + data.icerik;
+            var chat = document.getElementById('chat');
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        });
+
+        socket.on('kullanici-listesi', function(list) {
+            document.getElementById('liste').textContent = list.join(', ');
+        });
     </script>
 </body>
 </html>
