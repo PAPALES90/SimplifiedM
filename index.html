@@ -1,92 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SimplifiedM Chat</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e5ddd5; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        
-        /* Giriş Modalı */
-        #login-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: #008069; display:flex; justify-content:center; align-items:center; z-index: 1000; }
-        .login-box { background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        
-        /* Sohbet Ekranı */
-        #chat-ui { width: 100%; max-width: 400px; height: 90vh; background: white; display: flex; flex-direction: column; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); overflow: hidden; }
-        #header { background: #008069; color: white; padding: 15px; text-align: center; font-weight: bold; }
-        #chat { flex: 1; padding: 15px; overflow-y: auto; background: #f0f2f5; }
-        
-        /* Baloncuklar */
-        .msg { background: white; padding: 10px; margin: 8px 0; border-radius: 10px; width: fit-content; max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
-        /* Giriş Çubuğu */
-        .footer { padding: 10px; display: flex; gap: 5px; background: white; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; }
-        button { background: #008069; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; }
+        body { margin: 0; background: #2a9d8f; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        #login { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; }
+        #chat-area { display: none; flex-direction: column; height: 100%; }
+        #messages { flex: 1; overflow-y: auto; padding: 20px; }
+        .bubble { background: white; padding: 12px; border-radius: 15px; margin: 10px 0; width: 70%; position: relative; }
+        .admin-tag { color: red; font-weight: bold; }
+        .special-msg { border: 3px solid #ffcc00; background-color: #fff9c4 !important; }
     </style>
 </head>
 <body>
 
-    <div id="login-modal">
-        <div class="login-box">
-            <h2>Hoş geldin!</h2>
-            <input id="name-input" placeholder="Adın ne?">
-            <br><br>
-            <button onclick="kayitOl()">Sohbete Başla</button>
+    <div id="login">
+        <h1>Sohbet Odası</h1>
+        <input id="name" placeholder="İsminiz...">
+        <button onclick="start()" style="padding: 10px 30px;">Giriş Yap</button>
+    </div>
+
+    <div id="chat-area">
+        <div id="messages"></div>
+        <div style="display: flex; padding: 10px; background: #eee;">
+            <input id="msg" style="flex:1; padding:10px;" placeholder="Mesaj..." onkeydown="handleEnter(event)">
+            <button onclick="send()" style="padding: 10px 20px;">Gönder</button>
         </div>
     </div>
 
-    <div id="chat-ui" style="display:none;">
-        <div id="header">Aktif: <span id="liste">...</span></div>
-        <div id="chat"></div>
-        <div class="footer">
-            <input id="input" placeholder="Mesaj yaz...">
-            <button onclick="send()">Gönder</button>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        var socket = io(); 
-        var kullaniciAdi = localStorage.getItem('chatUsername');
+        var socket = io();
+        var myName = "";
 
-        if (kullaniciAdi) { baslat(kullaniciAdi); }
-
-        function kayitOl() {
-            var isim = document.getElementById('name-input').value;
-            if(isim) {
-                localStorage.setItem('chatUsername', isim);
-                baslat(isim);
-            }
-        }
-
-        function baslat(isim) {
-            kullaniciAdi = isim;
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('chat-ui').style.display = 'flex';
-            socket.emit('yeni-kullanici', isim);
+        function start() {
+            myName = document.getElementById('name').value;
+            if(myName === "") return;
+            socket.emit('login', myName);
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'flex';
         }
 
         function send() {
-            var input = document.getElementById('input');
-            if(input.value.trim() !== "") {
-                socket.emit('mesaj', {kimden: kullaniciAdi, icerik: input.value});
-                input.value = '';
-            }
+            var input = document.getElementById('msg');
+            if(input.value === "") return;
+            socket.emit('chat', {msg: input.value});
+            input.value = "";
         }
 
-        socket.on('mesaj', function(data) {
-            var div = document.createElement('div');
-            div.className = 'msg';
-            div.innerHTML = '<strong>' + data.kimden + ':</strong> ' + data.icerik;
-            var chat = document.getElementById('chat');
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
+        function handleEnter(e) { if (e.keyCode === 13) send(); }
+
+        socket.on('init', function(history) {
+            for(var i=0; i<history.length; i++) { addMessage(history[i]); }
         });
 
-        socket.on('kullanici-listesi', function(list) {
-            document.getElementById('liste').textContent = list.join(', ');
-        });
+        socket.on('chat', function(data) { addMessage(data); });
+
+        function addMessage(data) {
+            var messages = document.getElementById('messages');
+            var div = document.createElement('div');
+            
+            var adminClass = (data.user === 'PAPALES90') ? 'admin-tag' : '';
+            var adminLabel = (data.user === 'PAPALES90') ? '[Yönetici] ' : '';
+            var isSpecial = data.msg.toLowerCase().includes('asvbnajknsğfkasğsf');
+            div.className = 'bubble ' + (isSpecial ? 'special-msg' : '');
+
+            div.innerHTML = '<span class="'+adminClass+'">'+adminLabel+'</span>' + 
+                            "<b>" + data.user + "</b>: " + data.msg + 
+                            "<sub style='display:block; font-size:9px; color:#888;'>" + data.time + "</sub>";
+            
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
     </script>
 </body>
 </html>
