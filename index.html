@@ -6,7 +6,7 @@
         body { margin: 0; background: #2a9d8f; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
         #login { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; }
         #chat-area { display: none; flex-direction: column; height: 100%; }
-        #messages { flex: 1; overflow-y: auto; padding: 20px; }
+        #messages { flex: 1; overflow-y: scroll; padding: 20px; }
         .bubble { background: white; padding: 12px; border-radius: 15px; margin: 10px 0; width: 70%; position: relative; }
         .admin-tag { color: red; font-weight: bold; }
         .special-msg { border: 3px solid #ffcc00; background-color: #fff9c4 !important; }
@@ -23,7 +23,7 @@
     <div id="chat-area">
         <div id="messages"></div>
         <div style="display: flex; padding: 10px; background: #eee;">
-            <input id="msg" style="flex:1; padding:10px;" placeholder="Mesaj..." onkeydown="handleEnter(event)">
+            <input id="msg" style="flex:1; padding:10px;" placeholder="Mesaj yaz..." onkeydown="handleEnter(event)">
             <button onclick="send()" style="padding: 10px 20px;">Gönder</button>
         </div>
     </div>
@@ -50,18 +50,23 @@
 
         function handleEnter(e) { if (e.keyCode === 13) send(); }
 
+        // Eski mesajları yükler (Sunucudan gelir)
         socket.on('init', function(history) {
             for(var i=0; i<history.length; i++) { addMessage(history[i]); }
         });
 
+        // Yeni mesaj gelince ekler
         socket.on('chat', function(data) { addMessage(data); });
 
         function addMessage(data) {
             var messages = document.getElementById('messages');
             var div = document.createElement('div');
             
+            // Yönetici kontrolü
             var adminClass = (data.user === 'PAPALES90') ? 'admin-tag' : '';
             var adminLabel = (data.user === 'PAPALES90') ? '[Yönetici] ' : '';
+            
+            // Sarı çerçeve kontrolü
             var isSpecial = data.msg.toLowerCase().includes('asvbnajknsğfkasğsf');
             div.className = 'bubble ' + (isSpecial ? 'special-msg' : '');
 
