@@ -1,17 +1,48 @@
-<div id="kullanici-alani" style="border:1px solid red; padding:5px;">
-    <strong>Aktif Kişiler:</strong> <span id="liste"></span>
-</div>
-<div id="chat" style="height:250px; border:1px solid #ccc; overflow:auto;"></div>
+<!DOCTYPE html>
+<html>
+<body>
+    <div id="kullanici-alani" style="border:1px solid red; padding:5px;">
+        <strong>Aktif:</strong> <span id="liste"></span>
+    </div>
+    <div id="chat" style="height:250px; border:1px solid #ccc; overflow:auto;"></div>
+    
+    <input id="input" placeholder="Mesaj...">
+    <button onclick="send()">Gönder</button>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script>
-    const socket = io();
-    let isim = prompt("İsmin ne?") || "Misafir";
-    socket.emit('yeni-kullanici', isim);
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        let isim = prompt("İsmin ne?") || "Misafir";
+        socket.emit('yeni-kullanici', isim);
 
-    socket.on('kullanici-listesi', (list) => {
-        document.getElementById('liste').textContent = list.join(', ');
-    });
+        // 1. Geçmiş mesajları al
+        socket.on('gecmis-mesajlar', (gecmis) => {
+            gecmis.forEach(m => mesajEkle(m));
+        });
 
-    // ... (Mesaj gönderme fonksiyonun aynı kalacak) ...
-</script>
+        // 2. Yeni mesajı al
+        socket.on('mesaj', (data) => {
+            mesajEkle(data);
+        });
+
+        socket.on('kullanici-listesi', (list) => {
+            document.getElementById('liste').textContent = list.join(', ');
+        });
+
+        function send() {
+            const input = document.getElementById('input');
+            if(input.value.trim() !== "") {
+                socket.emit('mesaj', {isim: isim, mesaj: input.value});
+                input.value = '';
+            }
+        }
+
+        function mesajEkle(data) {
+            const div = document.createElement('div');
+            div.textContent = `(${data.kimden}): ${data.icerik}`;
+            document.getElementById('chat').appendChild(div);
+            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+        }
+    </script>
+</body>
+</html>
