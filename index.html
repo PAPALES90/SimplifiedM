@@ -32,6 +32,8 @@
     <script>
         var socket = io();
         var myName = "";
+        // SES SİSTEMİ BURADA
+        var beep = new Audio('https://actions.google.com/sounds/v1/notifications/beep_short.ogg');
 
         function start() {
             myName = document.getElementById('name').value;
@@ -39,6 +41,8 @@
             socket.emit('login', myName);
             document.getElementById('login').style.display = 'none';
             document.getElementById('chat-area').style.display = 'flex';
+            // İlk etkileşimle sesi hazırla
+            beep.play(); beep.pause();
         }
 
         function send() {
@@ -50,23 +54,21 @@
 
         function handleEnter(e) { if (e.keyCode === 13) send(); }
 
-        // Eski mesajları yükler (Sunucudan gelir)
         socket.on('init', function(history) {
             for(var i=0; i<history.length; i++) { addMessage(history[i]); }
         });
 
-        // Yeni mesaj gelince ekler
-        socket.on('chat', function(data) { addMessage(data); });
+        socket.on('chat', function(data) { 
+            addMessage(data); 
+            // HER MESAJDA BİP SESİ ÇALACAK
+            beep.play();
+        });
 
         function addMessage(data) {
             var messages = document.getElementById('messages');
             var div = document.createElement('div');
-            
-            // Yönetici kontrolü
             var adminClass = (data.user === 'PAPALES90') ? 'admin-tag' : '';
             var adminLabel = (data.user === 'PAPALES90') ? '[Yönetici] ' : '';
-            
-            // Sarı çerçeve kontrolü
             var isSpecial = data.msg.toLowerCase().includes('asvbnajknsğfkasğsf');
             div.className = 'bubble ' + (isSpecial ? 'special-msg' : '');
 
